@@ -1,5 +1,3 @@
 # 151B-WinningProject
 
-Submit solution to kaggle
-
-`kaggle competitions submit -c cse151b-spring2022 -f submission.csv -m "Message"`
+To submit: kaggle competitions submit -c cse151b-spring2022 -f ~/151B-WinningProject/submissions/file.csv -m "Message"
