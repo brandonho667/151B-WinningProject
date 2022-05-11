@@ -1,9 +1,22 @@
-from torch import *
+import torch
 
-class BiDeepSeq2Seq(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        super(BiDeepSeq2Seq, self).__init__()
-        self.hidden_dim = hidden_dim
-        self.encoder = nn.LSTM(input_size=input_dim, hidden_size=hidden_dim, num_layers=3, bidirectional=True)
-        self.decoder = nn.LSTM(input_size=output_dim, hidden_size=hidden_dim, num_layers=3, bidirectional=True)
-        self.h2pt = nn.Linear(in_features=hidden_dim, out_features=output_dim)
+class LSTM(torch.nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim, device):
+        super(LSTM, self).__init__()
+        self.lstm = torch.nn.LSTM(input_size=input_dim, hidden_size=hidden_dim, batch_first=True)
+        self.linear = torch.nn.Linear(in_features=hidden_dim, out_features=output_dim)
+        self.device = device
+    
+    def forward(self, x):
+        if self.training:
+            out, _ = self.lstm(x)
+            y = self.linear(out)
+            return y
+        else:
+            y = torch.zeros((x.size(0), x.size(1)+59, x.size(2)), device=self.device)
+            out, (h, c) = self.lstm(x)
+            y[:, :x.size(1), :] = self.linear(out)
+            for i in range(59):
+                out, (h, c) = self.lstm(y[:, x.size(1)+i-1:x.size(1)+i, :], (h, c))
+                y[:, x.size(1)+i:x.size(1)+i+1, :] = self.linear(out)
+            return y[:, x.size(1)-1:, :]
