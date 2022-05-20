@@ -3,13 +3,15 @@ import torch
 class LSTM(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, device):
         super(LSTM, self).__init__()
-        self.lstm = torch.nn.LSTM(input_size=input_dim, hidden_size=hidden_dim, num_layers=2, dropout=0.1, batch_first=True)
+        self.lstm = torch.nn.LSTM(input_size=input_dim, hidden_size=hidden_dim, num_layers=2, dropout=0.2, batch_first=True)
+        self.dropout = torch.nn.Dropout(p=0.2)
         self.linear = torch.nn.Linear(in_features=hidden_dim, out_features=output_dim)
         self.device = device
     
     def forward(self, x):
         if self.training:
             out, _ = self.lstm(x)
+            out = self.dropout(out)
             y = self.linear(out)
             return y
         else:        
