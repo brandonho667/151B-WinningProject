@@ -41,7 +41,7 @@ class LSTMAttention(torch.nn.Module):
         self.dec1_dropout = torch.nn.Dropout(p=dropout)
         
         self.dec2 = torch.nn.LSTM(
-            input_size=2*hidden_dim, hidden_size=hidden_dim, batch_first=True, bidirectional=True)
+            input_size=2*hidden_dim, hidden_size=hidden_dim, batch_first=True, dropout=dropout, bidirectional=True)
         self.dec2_dropout = torch.nn.Dropout(p=dropout)
         
         self.linear = torch.nn.Linear(in_features=2*hidden_dim, out_features=output_dim)
@@ -49,7 +49,8 @@ class LSTMAttention(torch.nn.Module):
        
     def forward(self, x):
         enc_out, _ = self.enc(x)
-#         enc_out = self.enc_dropout(enc_out)
+        if self.training:
+            enc_out = self.enc_dropout(enc_out)
         
         keys = self.attn(enc_out).transpose(1, 2).contiguous()
         
@@ -74,9 +75,12 @@ class LSTMAttention(torch.nn.Module):
             dec1_bkwd_out[:, 60-i-1:60-i, :], (h_bkwd, c_bkwd) = self.dec1_bkwd(context_bkwd, (h_bkwd, c_bkwd))
         
         dec2_in = torch.cat((dec1_fwd_out, dec1_bkwd_out), dim=2)
+        if self.training:
+            dec2_in = self.dec1_dropout(dec2_in)
         dec_out, _ = self.dec2(dec2_in)
+        if self.training:
+            dec_out = self.dec2_dropout(dec_out)
         y = self.linear(dec_out)
-        print(y)
         return y
         
             
