@@ -46,8 +46,8 @@ def get_city_trajectories(city="palo-alto", split="train", normalized=False, vel
             outputs = np.concatenate((outputs, out_vels), axis=2)
             if accs:
                 inp_accs, out_accs = get_deltas(inp_vels, out_vels)
-                inputs = np.concatenate((inputs, inp_vels), axis=2)
-                outputs = np.concatenate((outputs, out_vels), axis=2)         
+                inputs = np.concatenate((inputs, inp_accs), axis=2)
+                outputs = np.concatenate((outputs, out_accs), axis=2)         
             
     else:
         f_in = ROOT_PATH + "test" + "/" + city + "_inputs"
@@ -68,7 +68,7 @@ def get_city_trajectories(city="palo-alto", split="train", normalized=False, vel
                 for idx in range(len(inp_vels)):
                     for i in range(inp_vels.shape[1]-1):
                         acc = inp_vels[idx,i+1, :2]-inp_vels[idx,i, :2]
-                        inp_accs[idx,i] = vel
+                        inp_accs[idx,i] = acc
                     inp_accs[idx,-1] = inp_accs[idx,-2]
                 inputs = np.concatenate((inputs, inp_accs), axis=2) 
     return inputs, outputs
