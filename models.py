@@ -41,7 +41,7 @@ class LSTMAttention(torch.nn.Module):
         self.dec1_dropout = torch.nn.Dropout(p=dropout)
         
         self.dec2 = torch.nn.LSTM(
-            input_size=2*hidden_dim, hidden_size=hidden_dim, batch_first=True, dropout=dropout, bidirectional=True)
+            input_size=2*hidden_dim, hidden_size=hidden_dim, batch_first=True, bidirectional=True)
         self.dec2_dropout = torch.nn.Dropout(p=dropout)
         
         self.linear = torch.nn.Linear(in_features=2*hidden_dim, out_features=output_dim)

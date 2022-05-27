@@ -3,14 +3,14 @@ import pickle5 as pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import random
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, random_split
 
 ROOT_PATH = "./argo2/"
 
 cities = ["austin", "miami", "pittsburgh", "dearborn", "washington-dc", "palo-alto"]
 splits = ["train", "validation", "test"]
 
-def get_city_trajectories(city="palo-alto", split="train", normalized=False, vels=False):
+def get_city_trajectories(city="palo-alto", split="train", normalized=False, vels=False, accs=False):
     if split=="train" or split=="validation":
         if city == "all":
             inputs = None
@@ -33,29 +33,22 @@ def get_city_trajectories(city="palo-alto", split="train", normalized=False, vel
             outputs = pickle.load(open(f_out, "rb"))
             outputs = np.asarray(outputs)
         
-        if split == "train":
-            inputs = inputs[:inputs.shape[0]*4//5]
-            outputs = outputs[:outputs.shape[0]*4//5]
-        else:
-            inputs = inputs[inputs.shape[0]*4//5:]
-            outputs = outputs[outputs.shape[0]*4//5:]
+#         if split == "train":
+#             inputs = inputs[:inputs.shape[0]*4//5]
+#             outputs = outputs[:outputs.shape[0]*4//5]
+#         else:
+#             inputs = inputs[inputs.shape[0]*4//5:]
+#             outputs = outputs[outputs.shape[0]*4//5:]
         
         if vels:
-            inp_vels = np.zeros(shape=(inputs.shape))
-            out_vels = np.zeros(shape=(outputs.shape))
-
-            for idx in range(len(inputs)):
-                for i in range(inputs.shape[1]-1):
-                    vel = inputs[idx,i+1, :2]-inputs[idx,i, :2]
-                    inp_vels[idx,i] = vel
-                inp_vels[idx,-1] = outputs[idx,0, :2]-inputs[idx,-1, :2]
-                for o in range(outputs.shape[1]-1):
-                    vel = outputs[idx,o+1, :2]-outputs[idx,o, :2]
-                    out_vels[idx,o] = vel
-                out_vels[idx,-1] = out_vels[idx,-2]
+            inp_vels, out_vels = get_deltas(inputs, outputs)
             inputs = np.concatenate((inputs, inp_vels), axis=2)
             outputs = np.concatenate((outputs, out_vels), axis=2)
-
+            if accs:
+                inp_accs, out_accs = get_deltas(inp_vels, out_vels)
+                inputs = np.concatenate((inputs, inp_vels), axis=2)
+                outputs = np.concatenate((outputs, out_vels), axis=2)         
+            
     else:
         f_in = ROOT_PATH + "test" + "/" + city + "_inputs"
         inputs = pickle.load(open(f_in, "rb"))
@@ -69,7 +62,15 @@ def get_city_trajectories(city="palo-alto", split="train", normalized=False, vel
                     vel = inputs[idx,i+1, :2]-inputs[idx,i, :2]
                     inp_vels[idx,i] = vel
                 inp_vels[idx,-1] = inp_vels[idx,-2]
-            inputs = np.concatenate((inputs, inp_vels), axis=2)    
+            inputs = np.concatenate((inputs, inp_vels), axis=2) 
+            if accs:
+                inp_accs = np.zeros(shape=(inp_vels.shape))
+                for idx in range(len(inp_vels)):
+                    for i in range(inp_vels.shape[1]-1):
+                        acc = inp_vels[idx,i+1, :2]-inp_vels[idx,i, :2]
+                        inp_accs[idx,i] = vel
+                    inp_accs[idx,-1] = inp_accs[idx,-2]
+                inputs = np.concatenate((inputs, inp_accs), axis=2) 
     return inputs, outputs
 
 class ArgoverseDataset(Dataset):
@@ -77,7 +78,7 @@ class ArgoverseDataset(Dataset):
     def __init__(self, city: str, split:str, transform=None):
         super(ArgoverseDataset, self).__init__()
         self.transform = transform 
-        self.inputs, self.outputs = get_city_trajectories(city=city, split=split, normalized=False, vels=True)
+        self.inputs, self.outputs = get_city_trajectories(city=city, split=split, normalized=False, vels=True, accs=True)
         print(self.inputs.shape)
         for idx in range(len(self.inputs)):
             start = np.zeros(shape=(2))
@@ -98,11 +99,26 @@ class ArgoverseDataset(Dataset):
 
         return data
     
-#     def split(self, split_ratio=0.2):
-#         valid_size = round(split_ratio * len(self.inputs))
-#         train_size = len(self.inputs) - valid_size
+    def split(self, split_ratio=0.2):
+        valid_size = round(split_ratio * len(self.inputs))
+        train_size = len(self.inputs) - valid_size
 
-#         return random_split(self, [train_size, valid_size])
+        return random_split(self, [train_size, valid_size])
+
+def get_deltas(inputs, outputs):
+    inp_delta = np.zeros(shape=(inputs.shape))
+    out_delta = np.zeros(shape=(outputs.shape))
+
+    for idx in range(len(inputs)):
+        for i in range(inputs.shape[1]-1):
+            vel = inputs[idx,i+1, :2]-inputs[idx,i, :2]
+            inp_delta[idx,i] = vel
+        inp_delta[idx,-1] = outputs[idx,0, :2]-inputs[idx,-1, :2]
+        for o in range(outputs.shape[1]-1):
+            vel = outputs[idx,o+1, :2]-outputs[idx,o, :2]
+            out_delta[idx,o] = vel
+        out_delta[idx,-1] = out_delta[idx,-2]
+    return inp_delta, out_delta
 
 
 def show_sample_batch(sample_batch):
