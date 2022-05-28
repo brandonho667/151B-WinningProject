@@ -75,17 +75,20 @@ def get_city_trajectories(city="palo-alto", split="train", normalized=False, vel
 
 class ArgoverseDataset(Dataset):
     """Dataset class for Argoverse"""
-    def __init__(self, city: str, split:str, transform=None):
+    def __init__(self, city: str, split:str, transform=None, gps=False):
         super(ArgoverseDataset, self).__init__()
         self.transform = transform 
-        self.inputs, self.outputs = get_city_trajectories(city=city, split=split, normalized=False, vels=True, accs=True)
+        if gps:
+            self.inputs, self.outputs = get_city_trajectories(city=city, split=split)
+        else:
+            self.inputs, self.outputs = get_city_trajectories(city=city, split=split, normalized=False, vels=True, accs=True)
+            for idx in range(len(self.inputs)):
+                start = np.zeros(shape=(2))
+                start[:2] = self.inputs[idx, 0, :2]
+                self.inputs[idx, :, :2] = self.inputs[idx, :, :2]-start
+                if split != "test":
+                    self.outputs[idx, :, :2] = self.outputs[idx, :, :2]-start
         print(self.inputs.shape)
-        for idx in range(len(self.inputs)):
-            start = np.zeros(shape=(2))
-            start[:2] = self.inputs[idx, 0, :2]
-            self.inputs[idx, :, :2] = self.inputs[idx, :, :2]-start
-            if split != "test":
-                self.outputs[idx, :, :2] = self.outputs[idx, :, :2]-start
 
     def __len__(self):
         return len(self.inputs)

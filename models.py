@@ -88,7 +88,7 @@ class Conv2Seq(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, dropout, device):
         super(Conv2Seq, self).__init__()
         
-        channel_sizes = [input_dim, 8, 16, 32]
+        channel_sizes = [input_dim, 64, 128, 256]
         kernel_sizes = [4, 8, 16]
         self.conv_enc = torch.nn.Sequential(
             torch.nn.Conv1d(in_channels=channel_sizes[0], out_channels=channel_sizes[1], kernel_size=kernel_sizes[0]),
@@ -103,13 +103,13 @@ class Conv2Seq(torch.nn.Module):
         
         self.hidden_dim = hidden_dim
         
-        self.attn = torch.nn.Linear(channel_sizes[3], hidden_dim)
+        self.attn = torch.nn.Linear(channel_sizes[-1], hidden_dim)
         self.softmax = torch.nn.Softmax(dim=1)
             
         self.dec1_fwd = torch.nn.LSTM(
-            input_size=channel_sizes[3], hidden_size=hidden_dim, batch_first=True)
+            input_size=channel_sizes[-1], hidden_size=hidden_dim, batch_first=True)
         self.dec1_bkwd = torch.nn.LSTM(
-            input_size=channel_sizes[3], hidden_size=hidden_dim, batch_first=True)
+            input_size=channel_sizes[-1], hidden_size=hidden_dim, batch_first=True)
         self.dec1_dropout = torch.nn.Dropout(p=dropout)
         
         self.dec2 = torch.nn.LSTM(
