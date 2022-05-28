@@ -43,8 +43,10 @@ class LSTMAttention(torch.nn.Module):
         self.dec2 = torch.nn.LSTM(
             input_size=2*hidden_dim, hidden_size=hidden_dim, num_layers=2, dropout=dropout, batch_first=True, bidirectional=True)
         self.dec2_dropout = torch.nn.Dropout(p=dropout)
-        
-        self.linear = torch.nn.Linear(in_features=2*hidden_dim, out_features=output_dim)
+        self.linear = torch.nn.Linear(in_features=2*hidden_dim, out_features=hidden_dim)
+        self.relu = torch.nn.ReLU()
+        self.lin_dropout = torch.nn.Dropout(p=dropout)
+        self.lin_out = torch.nn.Linear(in_features=hidden_dim, out_features=output_dim)
         self.device = device
        
     def forward(self, x):
@@ -168,6 +170,10 @@ class Conv2Seq(torch.nn.Module):
 #         if self.training:
 #             dec_out = self.dec2_dropout(dec_out)
         y = self.linear(dec_out)
+        y = self.relu(y)
+        if self.training:
+            y = self.lin_dropout(y)
+        y = self.lin_out(y)
         return y
 
 class LSTMAttention2(torch.nn.Module):

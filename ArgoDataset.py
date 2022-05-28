@@ -78,10 +78,11 @@ class ArgoverseDataset(Dataset):
     def __init__(self, city: str, split:str, transform=None, gps=False):
         super(ArgoverseDataset, self).__init__()
         self.transform = transform 
+
         if gps:
             self.inputs, self.outputs = get_city_trajectories(city=city, split=split)
         else:
-            self.inputs, self.outputs = get_city_trajectories(city=city, split=split, normalized=False, vels=True, accs=True)
+            self.inputs, self.outputs = get_city_trajectories(city=city, split=split, normalized=False, vels=True, accs=False)
             for idx in range(len(self.inputs)):
                 start = np.zeros(shape=(2))
                 start[:2] = self.inputs[idx, 0, :2]
@@ -103,8 +104,8 @@ class ArgoverseDataset(Dataset):
         return data
     
     def split(self, split_ratio=0.2):
-        valid_size = round(split_ratio * len(self.inputs))
-        train_size = len(self.inputs) - valid_size
+        valid_size = round(split_ratio * self.inputs.shape[0])
+        train_size = self.inputs.shape[0] - valid_size
 
         return random_split(self, [train_size, valid_size])
 
