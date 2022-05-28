@@ -88,7 +88,7 @@ class Conv2Seq(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, dropout, device):
         super(Conv2Seq, self).__init__()
         
-        channel_sizes = [input_dim, 64, 128, 256]
+        channel_sizes = [input_dim, 32, 64, 128, 64]
         kernel_sizes = [4, 8, 16]
         self.conv_enc = torch.nn.Sequential(
             torch.nn.Conv1d(in_channels=channel_sizes[0], out_channels=channel_sizes[1], kernel_size=kernel_sizes[0]),
@@ -98,7 +98,14 @@ class Conv2Seq(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Dropout(p=dropout),
             torch.nn.Conv1d(in_channels=channel_sizes[2], out_channels=channel_sizes[3], kernel_size=kernel_sizes[2]),
-            torch.nn.ReLU()
+            torch.nn.ReLU(),
+            torch.nn.Dropout(p=dropout),
+            torch.nn.BatchNorm1d(channel_sizes[3])
+        )
+
+        self.enc_linear = torch.nn.Sequential(
+            torch.nn.Linear(channel_sizes[3], channel_sizes[4]),
+            torch.nn.Tanh()
         )
         
         self.hidden_dim = hidden_dim
@@ -130,6 +137,7 @@ class Conv2Seq(torch.nn.Module):
         x_reshaped = x.transpose(1, 2).contiguous()
         conv_enc_out = self.conv_enc(x_reshaped)
         conv_enc_out = conv_enc_out.transpose(1, 2).contiguous()
+        conv_enc_out = self.enc_linear(conv_enc_out)
         
         keys = self.attn(conv_enc_out).transpose(1, 2).contiguous()
         
